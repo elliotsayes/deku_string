@@ -11,9 +11,13 @@ categories = ["encoding", "no-std", "parsing"]
 exclude = ["/.github", "/examples", "/*.md"]
 
 [dependencies]
-deku = { git = "https://github.com/elliotsayes/deku", branch = "heapless", default-features = false, features = ["alloc"] }
+deku = { git = "https://github.com/elliotsayes/deku", branch = "heapless_defmt", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.219", optional = true }
 defmt = { version = "1.0.1", optional = true }
+
+[features]
+defmt = ["dep:defmt", "deku/defmt"]
+heapless = ["deku/heapless"]
 
 [dev-dependencies]
 rstest = { version = "0.26.1" }
