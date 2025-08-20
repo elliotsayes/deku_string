@@ -1,9 +1,9 @@
-use alloc::{borrow::Cow, format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use deku::ctx::{Endian, Limit};
 use deku::reader::Reader;
 use deku::writer::Writer;
-use deku::{DekuError, DekuReader, DekuWriter, no_std_io};
+use deku::{deku_error, no_std_io, DekuError, DekuReader, DekuWriter};
 
 use crate::{Encoding, InternalValue, SevenBitU32, Size, StringDeku, StringLayout};
 
@@ -31,13 +31,13 @@ impl StringDeku {
             Encoding::Utf8 => {
                 read_string(reader, &null_requirement, limit_u8, endian, |buf| {
                     String::from_utf8(buf.to_vec())
-                        .map_err(|_| DekuError::Parse("Invalid UTF-8".into()))
+                        .map_err(|_| deku_error!(DekuError::Parse, "Invalid UTF-8"))
                 })
             }
             Encoding::Utf16 => {
                 read_string(reader, &null_requirement, limit_u16, endian, |buf| {
                     String::from_utf16(buf)
-                        .map_err(|_| DekuError::Parse("Invalid UTF-16".into()))
+                        .map_err(|_| deku_error!(DekuError::Parse, "Invalid UTF-16"))
                 })
             }
             Encoding::Utf32 => {
@@ -45,7 +45,7 @@ impl StringDeku {
                     let mut result: Vec<char> = vec![];
                     buf.iter().try_fold((), |_, value| {
                         let Some(ch) = char::from_u32(*value) else {
-                            return Err(DekuError::Parse("Invalid UTF-32".into()));
+                            return Err(deku_error!(DekuError::Parse, "Invalid UTF-32"));
                         };
                         result.push(ch);
                         Ok(())
@@ -224,16 +224,16 @@ where
         NullRequirement::Accepted => {}
         NullRequirement::Required => {
             if first_null == buf.len() {
-                return Err(DekuError::Assertion(Cow::from(
-                    "Null must be present in the buffer",
-                )));
+                return Err(deku_error!(DekuError::Assertion, 
+                    "Null must be present in the buffer"
+                ));
             }
         }
         NullRequirement::Rejected => {
             if first_null != buf.len() {
-                return Err(DekuError::Assertion(Cow::from(
-                    "Null must be present in the buffer",
-                )));
+                return Err(deku_error!(DekuError::Assertion, 
+                    "Null must be present in the buffer"
+                ));
             }
         }
     }
@@ -257,9 +257,9 @@ where
 
     let first_null: usize = buf.iter().position(|x| *x == zero).unwrap_or(buf.len());
     if first_null != buf.len() {
-        return Err(DekuError::Assertion(Cow::from(
-            "Null MUST NOT be present in the binary representation",
-        )));
+        return Err(deku_error!(DekuError::Assertion, 
+            "Null MUST NOT be present in the binary representation"
+        ));
     }
 
     match layout {
@@ -304,9 +304,9 @@ where
     };
 
     if buf.len() > max_size {
-        return Err(DekuError::Assertion(Cow::from(format!(
+        return Err(deku_error!(DekuError::Assertion, 
             "Encoded string length cannot exceed {max_size} bytes"
-        ))));
+        ));
     }
 
     // buffer len is not above corresponding type size,
@@ -339,15 +339,15 @@ where
     T: Default + Clone + PartialEq + DekuWriter<Endian>,
 {
     if buf.len() > size {
-        return Err(DekuError::Assertion(Cow::from(format!(
+        return Err(deku_error!(DekuError::Assertion, 
             "Encoded string length cannot exceed {size} elements"
-        ))));
+        ));
     }
 
     if !allow_no_null && first_null == size {
-        return Err(DekuError::Assertion(Cow::from(
-            "String fills whole output buffer, while Null character must be written",
-        )));
+        return Err(deku_error!(DekuError::Assertion, 
+            "String fills whole output buffer, while Null character must be written"
+        ));
     }
 
     buf.to_writer(writer, endian)?;
