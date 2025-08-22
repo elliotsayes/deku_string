@@ -1,4 +1,5 @@
-use alloc::string::String;
+use core::ops::Deref;
+
 use crate::Size;
 
 mod deku_impl;
@@ -28,12 +29,23 @@ mod std_impl;
 /// While content is hidden, `to_string`, `into` and equality functions and operators provide
 /// convenient way to make operations easier.
 #[derive(Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
-pub struct StringDeku(pub(crate) String);
+pub struct StringDeku(
+    #[cfg(not(feature = "bstr"))]
+    pub(crate) alloc::string::String,
+    #[cfg(feature = "bstr")]
+    pub(crate) bstr::BString,
+);
 
 #[cfg(feature = "defmt")]
 impl defmt::Format for StringDeku {
     fn format(&self, fmt: defmt::Formatter) {
+        #[cfg(not(feature = "bstr"))]
         defmt::write!(fmt, "{}", self.0.as_str());
+        #[cfg(feature = "bstr")]
+        {
+            use bstr::ByteVec;
+            defmt::write!(fmt, "{}", self.0.deref().to_vec().into_string_lossy().as_str());
+        }
     }
 }
 
@@ -80,4 +92,8 @@ pub enum Encoding {
 
     /// UTF-32 character sequences
     Utf32,
+
+    /// Binary UTF-8 string
+    #[cfg(feature = "bstr")]
+    BinaryUtf8,
 }

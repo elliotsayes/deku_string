@@ -1,10 +1,12 @@
 use crate::{
     InternalValue, StringDeku, serde_shim_implementation, std_shim_implementation,
 };
-use alloc::string::String;
 
 impl InternalValue for StringDeku {
-    type InternalType = String;
+    #[cfg(not(feature = "bstr"))]
+    type InternalType = alloc::string::String;
+    #[cfg(feature = "bstr")]
+    type InternalType = bstr::BString;
 
     fn internal_ref(&self) -> &Self::InternalType {
         &self.0
@@ -27,10 +29,22 @@ serde_shim_implementation! {
     test_input_encoded_invalid: "123",
 }
 
+#[cfg(not(feature = "bstr"))]
 std_shim_implementation! {
     module_name: std_impl,
     local_type: StringDeku,
     internal_type: alloc::string::String,
+    test_input: "from str".into(),
+    test_input_other: "other value".into(),
+    test_input_less: "aaa".into(),
+    test_input_greater: "zzz".into(),
+}
+
+#[cfg(feature = "bstr")]
+std_shim_implementation! {
+    module_name: std_impl,
+    local_type: StringDeku,
+    internal_type: bstr::BString,
     test_input: "from str".into(),
     test_input_other: "other value".into(),
     test_input_less: "aaa".into(),

@@ -1,9 +1,13 @@
+use core::ops::Deref as _;
+
 use alloc::{string::String, vec, vec::Vec};
 
 use deku::ctx::{Endian, Limit};
 use deku::reader::Reader;
 use deku::writer::Writer;
 use deku::{deku_error, no_std_io, DekuError, DekuReader, DekuWriter};
+#[cfg(feature = "bstr")]
+use bstr::{BString, ByteVec};
 
 use crate::{Encoding, InternalValue, SevenBitU32, Size, StringDeku, StringLayout};
 
@@ -24,7 +28,10 @@ impl StringDeku {
         // This won't ever match for zero-ended strings
         if limit_u8 == Limit::Count(0) {
             // if requested length is 0, skip the data
+            #[cfg(not(feature = "bstr"))]
             return Ok(StringDeku::from(""));
+            #[cfg(feature = "bstr")]
+            return Ok(StringDeku::from(BString::from("")));
         }
 
         match encoding {
@@ -32,12 +39,14 @@ impl StringDeku {
                 read_string(reader, &null_requirement, limit_u8, endian, |buf| {
                     String::from_utf8(buf.to_vec())
                         .map_err(|_| deku_error!(DekuError::Parse, "Invalid UTF-8"))
+                        .map(Into::into)
                 })
             }
             Encoding::Utf16 => {
                 read_string(reader, &null_requirement, limit_u16, endian, |buf| {
                     String::from_utf16(buf)
                         .map_err(|_| deku_error!(DekuError::Parse, "Invalid UTF-16"))
+                        .map(Into::into)
                 })
             }
             Encoding::Utf32 => {
@@ -53,6 +62,12 @@ impl StringDeku {
                     Ok(result.into_iter().collect())
                 })
             }
+            #[cfg(feature = "bstr")]
+            Encoding::BinaryUtf8 => {
+                read_string(reader, &null_requirement, limit_u8, endian, |buf| {
+                    Ok(bstr::BString::new(buf.to_vec()))
+                })
+            }
         }
     }
 
@@ -65,19 +80,48 @@ impl StringDeku {
     ) -> Result<(), DekuError> {
         match encoding {
             Encoding::Utf8 => {
+                #[cfg(not(feature = "bstr"))]
                 let mut buf = self.internal_ref().as_bytes().to_vec();
+                #[cfg(feature = "bstr")]
+                let mut buf = self.internal_ref().deref().to_vec();
                 write_string(writer, endian, layout, &mut buf)
             }
             Encoding::Utf16 => {
+                #[cfg(not(feature = "bstr"))]
                 let mut buf = self.internal_ref().encode_utf16().collect::<Vec<u16>>();
+                #[cfg(feature = "bstr")]
+                let mut buf = unsafe { 
+                    self.internal_ref()
+                        .deref()
+                        .to_vec()
+                        .into_string_unchecked()
+                        .encode_utf16()
+                        .collect::<Vec<u16>>()
+                };
                 write_string(writer, endian, layout, &mut buf)
             }
             Encoding::Utf32 => {
+                #[cfg(not(feature = "bstr"))]
                 let mut buf = self
                     .internal_ref()
                     .chars()
                     .map(|ch| ch.into())
                     .collect::<Vec<u32>>();
+                #[cfg(feature = "bstr")]
+                let mut buf = unsafe {
+                    self.internal_ref()
+                        .deref()
+                        .to_vec()
+                        .into_string_unchecked()
+                        .chars()
+                        .map(|ch| ch.into())
+                        .collect::<Vec<u32>>()
+                };
+                write_string(writer, endian, layout, &mut buf)
+            }
+            #[cfg(feature = "bstr")]
+            Encoding::BinaryUtf8 => {
+                let mut buf = self.internal_ref().to_vec();
                 write_string(writer, endian, layout, &mut buf)
             }
         }
@@ -209,7 +253,10 @@ fn read_string<'a, R, T>(
     null_requirement: &NullRequirement,
     limit: Limit<T, fn(&T) -> bool>,
     endian: Endian,
+    #[cfg(not(feature = "bstr"))]
     convert: fn(&[T]) -> Result<String, DekuError>,
+    #[cfg(feature = "bstr")]
+    convert: fn(&[T]) -> Result<bstr::BString, DekuError>,
 ) -> Result<StringDeku, DekuError>
 where
     R: no_std_io::Read + no_std_io::Seek,
