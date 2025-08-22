@@ -1,7 +1,8 @@
+use crate::Size;
 use core::ops::Deref;
 
-use crate::Size;
-
+#[cfg(feature = "defmt")]
+mod defmt_impl;
 mod deku_impl;
 mod lib_impl;
 mod std_impl;
@@ -30,24 +31,9 @@ mod std_impl;
 /// convenient way to make operations easier.
 #[derive(Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct StringDeku(
-    #[cfg(not(feature = "bstr"))]
-    pub(crate) alloc::string::String,
-    #[cfg(feature = "bstr")]
-    pub(crate) bstr::BString,
+    #[cfg(not(feature = "bstr"))] pub(crate) alloc::string::String,
+    #[cfg(feature = "bstr")] pub(crate) bstr::BString,
 );
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for StringDeku {
-    fn format(&self, fmt: defmt::Formatter) {
-        #[cfg(not(feature = "bstr"))]
-        defmt::write!(fmt, "{}", self.0.as_str());
-        #[cfg(feature = "bstr")]
-        {
-            use bstr::ByteVec;
-            defmt::write!(fmt, "{}", self.0.deref().to_vec().into_string_lossy().as_str());
-        }
-    }
-}
 
 /// String variant to read and write
 #[derive(Debug, Clone, Copy)]

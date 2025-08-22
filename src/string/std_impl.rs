@@ -2,12 +2,12 @@
 
 use core::ops::Deref;
 
+use crate::StringDeku;
 use alloc::borrow::Cow;
+#[cfg(not(feature = "bstr"))]
 use alloc::string::String;
 #[cfg(feature = "bstr")]
 use bstr::{BString, ByteVec};
-
-use crate::StringDeku;
 
 impl From<&str> for StringDeku {
     fn from(value: &str) -> StringDeku {

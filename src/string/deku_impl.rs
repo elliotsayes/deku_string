@@ -2,12 +2,12 @@ use core::ops::Deref as _;
 
 use alloc::{string::String, vec, vec::Vec};
 
+#[cfg(feature = "bstr")]
+use bstr::{BString, ByteVec};
 use deku::ctx::{Endian, Limit};
 use deku::reader::Reader;
 use deku::writer::Writer;
-use deku::{deku_error, no_std_io, DekuError, DekuReader, DekuWriter};
-#[cfg(feature = "bstr")]
-use bstr::{BString, ByteVec};
+use deku::{DekuError, DekuReader, DekuWriter, deku_error, no_std_io};
 
 use crate::{Encoding, InternalValue, SevenBitU32, Size, StringDeku, StringLayout};
 
@@ -54,7 +54,10 @@ impl StringDeku {
                     let mut result: Vec<char> = vec![];
                     buf.iter().try_fold((), |_, value| {
                         let Some(ch) = char::from_u32(*value) else {
-                            return Err(deku_error!(DekuError::Parse, "Invalid UTF-32"));
+                            return Err(deku_error!(
+                                DekuError::Parse,
+                                "Invalid UTF-32"
+                            ));
                         };
                         result.push(ch);
                         Ok(())
@@ -90,7 +93,7 @@ impl StringDeku {
                 #[cfg(not(feature = "bstr"))]
                 let mut buf = self.internal_ref().encode_utf16().collect::<Vec<u16>>();
                 #[cfg(feature = "bstr")]
-                let mut buf = unsafe { 
+                let mut buf = unsafe {
                     self.internal_ref()
                         .deref()
                         .to_vec()
@@ -253,10 +256,8 @@ fn read_string<'a, R, T>(
     null_requirement: &NullRequirement,
     limit: Limit<T, fn(&T) -> bool>,
     endian: Endian,
-    #[cfg(not(feature = "bstr"))]
-    convert: fn(&[T]) -> Result<String, DekuError>,
-    #[cfg(feature = "bstr")]
-    convert: fn(&[T]) -> Result<bstr::BString, DekuError>,
+    #[cfg(not(feature = "bstr"))] convert: fn(&[T]) -> Result<String, DekuError>,
+    #[cfg(feature = "bstr")] convert: fn(&[T]) -> Result<bstr::BString, DekuError>,
 ) -> Result<StringDeku, DekuError>
 where
     R: no_std_io::Read + no_std_io::Seek,
@@ -271,14 +272,16 @@ where
         NullRequirement::Accepted => {}
         NullRequirement::Required => {
             if first_null == buf.len() {
-                return Err(deku_error!(DekuError::Assertion, 
+                return Err(deku_error!(
+                    DekuError::Assertion,
                     "Null must be present in the buffer"
                 ));
             }
         }
         NullRequirement::Rejected => {
             if first_null != buf.len() {
-                return Err(deku_error!(DekuError::Assertion, 
+                return Err(deku_error!(
+                    DekuError::Assertion,
                     "Null must be present in the buffer"
                 ));
             }
@@ -304,7 +307,8 @@ where
 
     let first_null: usize = buf.iter().position(|x| *x == zero).unwrap_or(buf.len());
     if first_null != buf.len() {
-        return Err(deku_error!(DekuError::Assertion, 
+        return Err(deku_error!(
+            DekuError::Assertion,
             "Null MUST NOT be present in the binary representation"
         ));
     }
@@ -351,7 +355,8 @@ where
     };
 
     if buf.len() > max_size {
-        return Err(deku_error!(DekuError::Assertion, 
+        return Err(deku_error!(
+            DekuError::Assertion,
             "Encoded string length cannot exceed {max_size} bytes"
         ));
     }
@@ -386,13 +391,15 @@ where
     T: Default + Clone + PartialEq + DekuWriter<Endian>,
 {
     if buf.len() > size {
-        return Err(deku_error!(DekuError::Assertion, 
+        return Err(deku_error!(
+            DekuError::Assertion,
             "Encoded string length cannot exceed {size} elements"
         ));
     }
 
     if !allow_no_null && first_null == size {
-        return Err(deku_error!(DekuError::Assertion, 
+        return Err(deku_error!(
+            DekuError::Assertion,
             "String fills whole output buffer, while Null character must be written"
         ));
     }
