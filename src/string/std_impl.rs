@@ -58,38 +58,38 @@ impl PartialEq<StringDeku> for Cow<'_, str> {
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use alloc::borrow::Cow;
+#[cfg(test)]
+mod test {
+    use alloc::borrow::Cow;
 
-//     use crate::StringDeku;
-//     use rstest::rstest;
+    use crate::StringDeku;
+    use rstest::rstest;
 
-//     #[rstest]
-//     #[case::str("from str")]
-//     #[case::str(Cow::from("from str"))]
-//     fn test_from_eq<T>(#[case] value: T)
-//     where
-//         T: Into<StringDeku> + PartialEq<StringDeku> + std::fmt::Debug + Clone,
-//         StringDeku: PartialEq<T>,
-//     {
-//         let str_deku: StringDeku = value.clone().into();
+    #[rstest]
+    #[case::str("from str")]
+    #[case::str(Cow::from("from str"))]
+    fn test_from_eq<T>(#[case] value: T)
+    where
+        T: Into<StringDeku> + PartialEq<StringDeku> + std::fmt::Debug + Clone,
+        StringDeku: PartialEq<T>,
+    {
+        let str_deku: StringDeku = value.clone().into();
 
-//         assert_eq!(value, str_deku);
-//         assert_eq!(str_deku, value);
-//     }
+        assert_eq!(value, str_deku);
+        assert_eq!(str_deku, value);
+    }
 
-//     #[rstest]
-//     #[case::str("from str")]
-//     #[case::str(Cow::from("from str"))]
-//     fn test_from_ne<T>(#[case] value: T)
-//     where
-//         T: Into<StringDeku> + PartialEq<StringDeku> + std::fmt::Debug + Clone,
-//         StringDeku: PartialEq<T>,
-//     {
-//         let str_deku: StringDeku = "other value".into();
+    #[rstest]
+    #[case::str("from str")]
+    #[case::str(Cow::from("from str"))]
+    fn test_from_ne<T>(#[case] value: T)
+    where
+        T: Into<StringDeku> + PartialEq<StringDeku> + std::fmt::Debug + Clone,
+        StringDeku: PartialEq<T>,
+    {
+        let str_deku: StringDeku = "other value".into();
 
-//         assert_ne!(value, str_deku);
-//         assert_ne!(str_deku, value);
-//     }
-// }
+        assert_ne!(value, str_deku);
+        assert_ne!(str_deku, value);
+    }
+}
