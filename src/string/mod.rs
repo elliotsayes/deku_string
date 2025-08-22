@@ -95,5 +95,5 @@ pub enum Encoding {
 
     /// Binary UTF-8 string
     #[cfg(feature = "bstr")]
-    BinaryUtf8,
+    BinUtf8,
 }

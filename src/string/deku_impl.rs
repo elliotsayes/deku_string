@@ -63,7 +63,7 @@ impl StringDeku {
                 })
             }
             #[cfg(feature = "bstr")]
-            Encoding::BinaryUtf8 => {
+            Encoding::BinUtf8 => {
                 read_string(reader, &null_requirement, limit_u8, endian, |buf| {
                     Ok(bstr::BString::new(buf.to_vec()))
                 })
@@ -120,7 +120,7 @@ impl StringDeku {
                 write_string(writer, endian, layout, &mut buf)
             }
             #[cfg(feature = "bstr")]
-            Encoding::BinaryUtf8 => {
+            Encoding::BinUtf8 => {
                 let mut buf = self.internal_ref().to_vec();
                 write_string(writer, endian, layout, &mut buf)
             }
