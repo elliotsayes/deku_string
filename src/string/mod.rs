@@ -1,8 +1,5 @@
 use crate::Size;
-use core::ops::Deref;
 
-#[cfg(feature = "defmt")]
-mod defmt_impl;
 mod deku_impl;
 mod lib_impl;
 mod std_impl;
@@ -30,6 +27,7 @@ mod std_impl;
 /// While content is hidden, `to_string`, `into` and equality functions and operators provide
 /// convenient way to make operations easier.
 #[derive(Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct StringDeku(
     #[cfg(not(feature = "bstr"))] pub(crate) alloc::string::String,
     #[cfg(feature = "bstr")] pub(crate) bstr::BString,

@@ -3,9 +3,7 @@
 use core::ops::Deref;
 
 use crate::StringDeku;
-use alloc::borrow::Cow;
-#[cfg(not(feature = "bstr"))]
-use alloc::string::String;
+use alloc::{borrow::Cow, string::String};
 #[cfg(feature = "bstr")]
 use bstr::{BString, ByteVec};
 

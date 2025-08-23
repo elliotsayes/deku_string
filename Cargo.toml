@@ -14,7 +14,7 @@ exclude = ["/.github", "/examples", "/*.md"]
 deku = { git = "https://github.com/elliotsayes/deku", branch = "heapless_defmt", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.219", optional = true }
 defmt = { version = "1.0.1", optional = true }
-bstr = { version = "1.12.0", optional = true, default-features = false, features = ["alloc"] }
+bstr = { git = "https://github.com/elliotsayes/bstr", branch = "defmt", optional = true, default-features = false, features = ["alloc", "defmt"] }
 
 [features]
 defmt = ["dep:defmt", "deku/defmt"]
