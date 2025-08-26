@@ -36,21 +36,21 @@ impl StringDeku {
 
         match encoding {
             Encoding::Utf8 => {
-                read_string(reader, &null_requirement, limit_u8, endian, |buf| {
+                read_string(reader, &null_requirement, limit_u8, endian, false, |buf| {
                     String::from_utf8(buf.to_vec())
                         .map_err(|_| deku_error!(DekuError::Parse, "Invalid UTF-8"))
                         .map(Into::into)
                 })
             }
             Encoding::Utf16 => {
-                read_string(reader, &null_requirement, limit_u16, endian, |buf| {
+                read_string(reader, &null_requirement, limit_u16, endian, false, |buf| {
                     String::from_utf16(buf)
                         .map_err(|_| deku_error!(DekuError::Parse, "Invalid UTF-16"))
                         .map(Into::into)
                 })
             }
             Encoding::Utf32 => {
-                read_string(reader, &null_requirement, limit_u32, endian, |buf| {
+                read_string(reader, &null_requirement, limit_u32, endian, false, |buf| {
                     let mut result: Vec<char> = vec![];
                     buf.iter().try_fold((), |_, value| {
                         let Some(ch) = char::from_u32(*value) else {
@@ -67,7 +67,7 @@ impl StringDeku {
             }
             #[cfg(feature = "bstr")]
             Encoding::BinUtf8 => {
-                read_string(reader, &null_requirement, limit_u8, endian, |buf| {
+                read_string(reader, &null_requirement, limit_u8, endian, true, |buf| {
                     Ok(bstr::BString::new(buf.to_vec()))
                 })
             }
@@ -87,7 +87,7 @@ impl StringDeku {
                 let mut buf = self.internal_ref().as_bytes().to_vec();
                 #[cfg(feature = "bstr")]
                 let mut buf = self.internal_ref().deref().to_vec();
-                write_string(writer, endian, layout, &mut buf)
+                write_string(writer, endian, layout, false, &mut buf)
             }
             Encoding::Utf16 => {
                 #[cfg(not(feature = "bstr"))]
@@ -101,7 +101,7 @@ impl StringDeku {
                         .encode_utf16()
                         .collect::<Vec<u16>>()
                 };
-                write_string(writer, endian, layout, &mut buf)
+                write_string(writer, endian, layout, false, &mut buf)
             }
             Encoding::Utf32 => {
                 #[cfg(not(feature = "bstr"))]
@@ -120,12 +120,12 @@ impl StringDeku {
                         .map(|ch| ch.into())
                         .collect::<Vec<u32>>()
                 };
-                write_string(writer, endian, layout, &mut buf)
+                write_string(writer, endian, layout, false, &mut buf)
             }
             #[cfg(feature = "bstr")]
             Encoding::BinUtf8 => {
                 let mut buf = self.internal_ref().to_vec();
-                write_string(writer, endian, layout, &mut buf)
+                write_string(writer, endian, layout, true, &mut buf)
             }
         }
     }
@@ -256,6 +256,7 @@ fn read_string<'a, R, T>(
     null_requirement: &NullRequirement,
     limit: Limit<T, fn(&T) -> bool>,
     endian: Endian,
+    read_to_last_null: bool,
     #[cfg(not(feature = "bstr"))] convert: fn(&[T]) -> Result<String, DekuError>,
     #[cfg(feature = "bstr")] convert: fn(&[T]) -> Result<bstr::BString, DekuError>,
 ) -> Result<StringDeku, DekuError>
@@ -266,12 +267,16 @@ where
     let zero = T::default();
     let buf = <Vec<T>>::from_reader_with_ctx(reader, (limit, endian))?;
 
-    let first_null = buf.iter().position(|x| *x == zero).unwrap_or(buf.len());
+    // let first_null = buf.iter().position(|x| *x == zero).unwrap_or(buf.len());
+    let check_null_pos = match read_to_last_null {
+        true => buf.iter().rposition(|x| *x != zero).map(|i| i + 1).unwrap_or(buf.len()),
+        false => buf.iter().position(|x| *x == zero).unwrap_or(buf.len()),
+    };
 
     match null_requirement {
         NullRequirement::Accepted => {}
         NullRequirement::Required => {
-            if first_null == buf.len() {
+            if check_null_pos == buf.len() {
                 return Err(deku_error!(
                     DekuError::Assertion,
                     "Null must be present in the buffer"
@@ -279,7 +284,7 @@ where
             }
         }
         NullRequirement::Rejected => {
-            if first_null != buf.len() {
+            if check_null_pos != buf.len() {
                 return Err(deku_error!(
                     DekuError::Assertion,
                     "Null must be present in the buffer"
@@ -288,7 +293,7 @@ where
         }
     }
 
-    convert(&buf[..first_null]).map(Into::into)
+    convert(&buf[..check_null_pos]).map(Into::into)
 }
 
 /// Common implementation to write Vec<u8> and Vec<u16>
@@ -296,6 +301,7 @@ fn write_string<W, T>(
     writer: &mut Writer<W>,
     endian: Endian,
     layout: StringLayout,
+    write_to_last_null: bool,
     buf: &mut Vec<T>,
 ) -> Result<(), DekuError>
 where
@@ -305,13 +311,19 @@ where
     let zero = T::default();
     // don't write shady strings with null character in the middle
 
-    let first_null: usize = buf.iter().position(|x| *x == zero).unwrap_or(buf.len());
-    if first_null != buf.len() {
-        return Err(deku_error!(
-            DekuError::Assertion,
-            "Null MUST NOT be present in the binary representation"
-        ));
-    }
+    let check_null_pos: usize = match write_to_last_null {
+        true => buf.iter().rposition(|x| *x != zero).map(|i| i + 1).unwrap_or(buf.len()),
+        false => {
+            let first = buf.iter().position(|x| *x == zero).unwrap_or(buf.len());
+            if first != buf.len() {
+                return Err(deku_error!(
+                    DekuError::Assertion,
+                    "Null MUST NOT be present in the binary representation"
+                ));
+            }
+            first
+        },
+    };
 
     match layout {
         StringLayout::LengthPrefix(prefix_size) => {
@@ -331,7 +343,7 @@ where
             buf,
             size,
             allow_no_null,
-            first_null,
+            check_null_pos,
             zero,
         ),
     }
@@ -383,7 +395,7 @@ fn write_string_fixed_length<W, T>(
     buf: &mut Vec<T>,
     size: usize,
     allow_no_null: bool,
-    first_null: usize,
+    check_null_pos: usize,
     zero: T,
 ) -> Result<(), DekuError>
 where
@@ -397,7 +409,7 @@ where
         ));
     }
 
-    if !allow_no_null && first_null == size {
+    if !allow_no_null && check_null_pos == size {
         return Err(deku_error!(
             DekuError::Assertion,
             "String fills whole output buffer, while Null character must be written"
