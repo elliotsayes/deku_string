@@ -33,10 +33,6 @@ pub struct StringDeku(
     #[cfg(feature = "bstr")] pub(crate) bstr::BString,
 );
 
-// Also expose the internal type
-#[cfg(feature = "bstr")]
-pub use bstr::BString;
-
 /// String variant to read and write
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]

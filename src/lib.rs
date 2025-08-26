@@ -66,6 +66,9 @@ pub(crate) use common::std_impl::std_shim_implementation;
 
 pub use seven_bit::{SevenBitU8, SevenBitU16, SevenBitU32, SevenBitU64, SevenBitU128};
 pub use string::{Encoding, StringDeku, StringLayout};
+// Also expose the internal type of StringDeku if necessary
+#[cfg(feature = "bstr")]
+pub use bstr::BString;
 
 /// Length prefix size
 #[derive(Debug, Clone, Copy)]
