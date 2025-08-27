@@ -27,11 +27,27 @@ mod std_impl;
 /// While content is hidden, `to_string`, `into` and equality functions and operators provide
 /// convenient way to make operations easier.
 #[derive(Clone, Default, PartialEq, PartialOrd, Eq, Ord)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct StringDeku(
     #[cfg(not(feature = "bstr"))] pub(crate) alloc::string::String,
     #[cfg(feature = "bstr")] pub(crate) bstr::BString,
 );
+
+// For String, we just print it out as a str
+#[cfg(all(feature = "defmt", not(feature = "bstr")))]
+impl defmt::Format for StringDeku {
+    fn format(&self, f: defmt::Formatter) {
+        defmt::write!(f, "{}", self.0.as_str())
+    }
+}
+
+// For BString, we want to print out the bytes as ASCII
+#[cfg(all(feature = "defmt", feature = "bstr"))]
+impl defmt::Format for StringDeku {
+    fn format(&self, f: defmt::Formatter) {
+        let v = (*self.0).as_slice();
+        defmt::write!(f, "{:a}", v)
+    }
+}
 
 /// String variant to read and write
 #[derive(Debug, Clone, Copy)]
