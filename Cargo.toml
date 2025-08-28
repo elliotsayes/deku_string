@@ -14,12 +14,13 @@ exclude = ["/.github", "/examples", "/*.md"]
 deku = { git = "https://github.com/elliotsayes/deku", branch = "heapless_defmt", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.219", optional = true }
 defmt = { version = "1.0.1", optional = true }
-bstr = { git = "https://github.com/elliotsayes/bstr", branch = "defmt", optional = true, default-features = false, features = ["alloc", "defmt"] }
+bstr = { git = "https://github.com/elliotsayes/bstr", branch = "defmt", optional = true, default-features = false, features = ["alloc"] }
 
 [features]
-defmt = ["dep:defmt", "deku/defmt"]
+defmt = ["dep:defmt", "deku/defmt", "bstr/defmt"]
 heapless = ["deku/heapless"]
 bstr = ["dep:bstr"]
+serde = ["dep:serde", "bstr/serde"]
 
 [dev-dependencies]
 rstest = { version = "0.26.1" }
