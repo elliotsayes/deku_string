@@ -21,11 +21,21 @@ impl InternalValue for StringDeku {
     }
 }
 
+#[cfg(not(feature = "bstr"))]
 serde_shim_implementation! {
     module_name: serde_impl,
     local_type: StringDeku,
     test_input: "from str",
     test_input_encoded: "\"from str\"",
+    test_input_encoded_invalid: "123",
+}
+
+#[cfg(feature = "bstr")]
+serde_shim_implementation! {
+    module_name: serde_impl,
+    local_type: StringDeku,
+    test_input: "from str",
+    test_input_encoded: "[102,114,111,109,32,115,116,114]",
     test_input_encoded_invalid: "123",
 }
 
