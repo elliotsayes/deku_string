@@ -97,6 +97,7 @@ macro_rules! std_shim_implementation {
 
             #[cfg(test)]
             mod test {
+                extern crate std;
                 use core::cmp::Ordering;
                 use std::format;
 

@@ -68,7 +68,7 @@ mod test {
     #[case::str(Cow::from("from str"))]
     fn test_from_eq<T>(#[case] value: T)
     where
-        T: Into<StringDeku> + PartialEq<StringDeku> + std::fmt::Debug + Clone,
+        T: Into<StringDeku> + PartialEq<StringDeku> + core::fmt::Debug + Clone,
         StringDeku: PartialEq<T>,
     {
         let str_deku: StringDeku = value.clone().into();
@@ -82,7 +82,7 @@ mod test {
     #[case::str(Cow::from("from str"))]
     fn test_from_ne<T>(#[case] value: T)
     where
-        T: Into<StringDeku> + PartialEq<StringDeku> + std::fmt::Debug + Clone,
+        T: Into<StringDeku> + PartialEq<StringDeku> + core::fmt::Debug + Clone,
         StringDeku: PartialEq<T>,
     {
         let str_deku: StringDeku = "other value".into();

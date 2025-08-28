@@ -53,8 +53,6 @@
 //! }
 //! ```
 extern crate alloc;
-#[cfg(test)]
-extern crate std;
 
 mod common;
 mod seven_bit;
