@@ -12,7 +12,7 @@ exclude = ["/.github", "/examples", "/*.md"]
 
 [dependencies]
 deku = { git = "https://github.com/elliotsayes/deku", branch = "heapless_defmt", default-features = false, features = ["alloc"] }
-serde = { version = "1.0.219", optional = true }
+serde = { version = "1.0.219", default-features = false, optional = true }
 defmt = { version = "1.0.1", optional = true }
 bstr = { git = "https://github.com/elliotsayes/bstr", branch = "defmt", optional = true, default-features = false, features = ["alloc"] }
 
